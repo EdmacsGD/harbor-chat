@@ -113,6 +113,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .rchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .rchip{display:flex!important;align-items:center;gap:6px;margin:0!important;min-height:36px;padding:0 10px;border-radius:18px;background:var(--in);font-size:14px!important;font-weight:600!important}
 .row.l{justify-content:flex-start;flex-wrap:wrap;margin-top:10px}
+.gbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:#fff;color:#1f1f1f;border:1px solid #dadce0}.gbtn:hover{background:#f2f3f5}
 .err{display:none;color:#e5484d;font-size:14px;margin-top:10px}
 @media(max-width:1100px){#app{grid-template-columns:72px 240px minmax(0,1fr)}#mem{display:none}}
 @media(max-width:760px){#app{grid-template-columns:minmax(0,1fr)}
@@ -130,7 +131,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
   <aside id="side">
     <div class="shead" id="sideTitle">Harbor</div>
     <div id="list"></div>
-    <div id="mepanel"><span id="meAv"></span><span class="nm" id="meName">Connecting...</span><button class="sm" id="editMe">Edit</button></div>
+    <div id="mepanel"><span id="meAv"></span><span class="nm" id="meName">Connecting...</span><button class="sm" id="editMe">Edit</button><button class="sm" id="logout">Log out</button></div>
   </aside>
   <main id="main">
     <div class="chead"><button id="menu" aria-label="Open channels">&#9776;</button><span class="t" id="chTitle"># general</span></div>
@@ -151,6 +152,11 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
   <aside id="mem" aria-label="Members"></aside>
 </div>
 <div id="pick"></div>
+<div class="ov" id="login"><div class="card">
+  <h2>Welcome to Harbor</h2><p>Sign in with your Google account to chat with your friends.</p>
+  <button class="btn gbtn" id="gLogin"><svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Sign in with Google</button>
+  <div class="err" id="lErr"></div>
+</div></div>
 <div class="ov" id="setup"><div class="card">
   <h2>Pick your look</h2><p>This is how others see you in chat.</p>
   <label for="nmIn">Display name</label><input type="text" id="nmIn" maxlength="24" placeholder="Your name">
@@ -356,7 +362,7 @@ function autosize(){const t=$('#txt');t.style.height='auto';t.style.height=Math.
 
 /* ---- profile setup ---- */
 function openSetup(){
-  const p=P(S.uid);$('#nmIn').value=p.name||'';S.draftColor=p.color||COLORS[Math.floor(Math.random()*COLORS.length)];S.draftAv=p.avatar||null;
+  const p=P(S.uid);$('#nmIn').value=p.name||String((S.meta&&(S.meta.full_name||S.meta.name))||'').slice(0,24);S.draftColor=p.color||COLORS[Math.floor(Math.random()*COLORS.length)];S.draftAv=p.avatar||null;
   drawSetup();$('#setup').style.display='grid';$('#setCancel').style.display=p.name?'':'none';setTimeout(()=>$('#nmIn').focus(),50);
 }
 function drawSetup(){
@@ -526,6 +532,8 @@ $('#modal').addEventListener('change',onGrant);
 $('#modal').addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if(e.key==='Enter'&&e.target.id==='newName')createServer();if(e.key==='Enter'&&e.target.id==='joinCode')joinServer(e.target.value);if(e.key==='Enter'&&e.target.id==='newCh')$('[data-do="addCh"]').click()});
 $('#srvfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{S.srvIcon=await shrink(f,128,40000);drawSettings()}catch(_){mErr('That picture could not be used.')}};
 $('#editMe').onclick=()=>S.uid&&openSetup();
+$('#logout').onclick=async()=>{await sb.auth.signOut();location.reload()};
+$('#gLogin').onclick=async()=>{const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});if(error){const e=$('#lErr');e.textContent='Sign-in failed: '+error.message;e.style.display='block'}};
 $('#sw').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(b){S.draftColor=b.dataset.c;drawSetup()}});
 $('#nmIn').addEventListener('input',drawSetup);
 $('#nmIn').addEventListener('keydown',e=>{if(e.key==='Enter')saveSetup()});
@@ -540,13 +548,17 @@ renderAll();
 (async()=>{
   const off=t=>{$('#msgs').innerHTML='<div class="empty"><h2>Chat is offline</h2>'+t+'</div>';$('#meName').textContent='Offline'};
   if(!sb){off('The chat library did not load. Check your internet and reload.');return}
+  // remember an invite code across the Google redirect
+  const hashCode=(location.hash.match(/^#join=([a-z0-9]+)/i)||[])[1];
+  if(hashCode){try{localStorage.setItem('harborJoin',hashCode)}catch(_){}history.replaceState(null,'',location.pathname)}
   let {data:{session}}=await sb.auth.getSession();
-  if(!session){const r=await sb.auth.signInAnonymously();if(r.error){off('Could not join: '+esc(r.error.message));return}session=r.data.session}
-  S.uid=session.user.id;
+  if(session&&session.user.is_anonymous){await sb.auth.signOut();session=null}
+  if(!session){$('#login').style.display='grid';$('#meName').textContent='Signed out';return}
+  S.uid=session.user.id;S.meta=session.user.user_metadata||{};
   await loadAll();
   if(!S.profiles[S.uid])openSetup();
-  const code=(location.hash.match(/^#join=([a-z0-9]+)/i)||[])[1];
-  if(code){history.replaceState(null,'',location.pathname);await joinServer(code)}
+  let code=null;try{code=localStorage.getItem('harborJoin');localStorage.removeItem('harborJoin')}catch(_){}
+  if(code)await joinServer(code);
   const t=n=>({event:'*',schema:'public',table:n});
   sb.channel('harbor')
     .on('postgres_changes',t('harbor_messages'),p=>{if(p.eventType==='DELETE'?S.msgs.some(m=>m.id===p.old.id):p.new.room===S.room)schedule()})
