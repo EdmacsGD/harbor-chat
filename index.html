@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Harbor Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a busy late-night chat app, calm chrome, loud content
+   IDEA: a Discord-style hangout: rail, channels, chat, members
+   PICTURE: the working chat itself fills the screen
+   COLOUR and TYPE: charcoal slate, coral accent, Figtree
+   LAYOUT: 72px rail, 240px sidebar, fluid chat, 220px members; sidebar slides in under 760px */
+:root{color-scheme:light dark;
+--rail:light-dark(#e2e4e9,#14161b);--side:light-dark(#f1f2f5,#1c1f25);--bg:light-dark(#fff,#24272e);
+--ink:light-dark(#1b1e24,#e7e9ed);--mute:light-dark(#5b6270,#9aa1ae);--line:light-dark(#e0e2e7,#30343c);
+--hov:light-dark(#e9ebef,#2b2f36);--in:light-dark(#ebedf1,#30343c);--acc:#ff6b4a;--acc2:light-dark(#d94a2a,#ff8a6e)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Figtree,system-ui,sans-serif;overflow:hidden}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#app{display:grid;grid-template-columns:72px 240px minmax(0,1fr) 220px;height:100%}
+#rail{background:var(--rail);display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0}
+.ri{width:48px;height:48px;border-radius:24px;background:var(--side);display:grid;place-items:center;font-weight:800;transition:border-radius .15s,background .15s;position:relative}
+.ri:hover,.ri.on{border-radius:16px;background:var(--acc);color:#fff}
+.ri.on::before{content:"";position:absolute;left:-12px;width:4px;height:36px;border-radius:0 4px 4px 0;background:var(--ink)}
+.sep{width:32px;height:2px;background:var(--line);border-radius:2px}
+#side{background:var(--side);display:flex;flex-direction:column}
+.shead{height:52px;display:flex;align-items:center;padding:0 16px;font-weight:800;border-bottom:1px solid var(--line)}
+#list{flex:1;overflow-y:auto;padding:12px 8px}
+.lab{font-size:12px;font-weight:700;color:var(--mute);padding:14px 8px 6px}
+.it{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:6px 8px;border-radius:6px;color:var(--mute);text-align:left}
+.it:hover{background:var(--hov);color:var(--ink)}.it.on{background:var(--hov);color:var(--ink);font-weight:600}
+.hash{font-size:20px;width:22px;text-align:center;opacity:.7}
+#mepanel{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--rail);min-height:56px}
+#mepanel .nm{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sm{font-size:13px;color:var(--mute);padding:6px 10px;border-radius:6px}.sm:hover{background:var(--hov);color:var(--ink)}
+#main{display:flex;flex-direction:column;background:var(--bg)}
+.chead{height:52px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--line);font-weight:700}
+.chead .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#menu{display:none;width:40px;height:40px;border-radius:8px;font-size:20px}
+#note{display:none;padding:8px 16px;font-size:13px;background:light-dark(#fff1ec,#3a2722);color:var(--acc2)}
+#msgs{flex:1;overflow-y:auto;padding:16px 0 8px}
+.empty{padding:40px 24px;color:var(--mute)}.empty h2{color:var(--ink);font-size:28px;line-height:1.1;margin:0 0 6px}
+.m{position:relative;display:grid;grid-template-columns:40px minmax(0,1fr);gap:0 14px;padding:2px 16px 2px 16px}
+.m.first{margin-top:14px}.m:hover{background:var(--hov)}
+.m .gut{font-size:11px;color:var(--mute);text-align:center;padding-top:4px;opacity:0}.m:hover .gut{opacity:1}
+.who{font-weight:700}.when{font-size:12px;color:var(--mute);margin-left:8px;font-weight:400}
+.txt{white-space:pre-wrap;overflow-wrap:anywhere}
+.txt code{background:var(--in);padding:1px 5px;border-radius:4px;font-size:13px}
+.txt a{color:var(--acc2)}
+.ed{font-size:11px;color:var(--mute)}
+.pic{display:block;max-width:min(420px,100%);max-height:340px;border-radius:8px;margin-top:6px;cursor:zoom-in}
+.rxs{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.rx{display:flex;align-items:center;gap:4px;min-height:28px;padding:2px 8px;border-radius:8px;background:var(--in);border:1px solid transparent;font-size:14px}
+.rx.mine{border-color:var(--acc);background:light-dark(#ffece6,#3d2a25)}
+.acts{position:absolute;right:16px;top:-14px;display:none;background:var(--side);border:1px solid var(--line);border-radius:8px;padding:2px}
+.m:hover .acts,.m:focus-within .acts{display:flex}
+.acts button{min-width:36px;height:32px;border-radius:6px;font-size:13px;padding:0 8px}.acts button:hover{background:var(--hov)}
+.acts .del.arm{background:var(--acc);color:#fff}
+.av{border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;flex:none;overflow:hidden;object-fit:cover}
+#comp{padding:0 16px 20px}
+#prev{display:none;position:relative;margin-bottom:8px;width:max-content;max-width:100%}
+#prev img{max-height:120px;border-radius:8px;display:block}
+#prev button{position:absolute;top:4px;right:4px;width:28px;height:28px;border-radius:14px;background:#000a;color:#fff}
+.box{display:flex;align-items:flex-end;gap:4px;background:var(--in);border-radius:10px;padding:6px 8px}
+.box button{width:40px;height:40px;border-radius:8px;font-size:22px;color:var(--mute)}.box button:hover{color:var(--ink)}
+#txt{flex:1;resize:none;border:0;background:none;outline:none;font-size:16px;padding:9px 4px;max-height:200px}
+#txt:disabled{opacity:.6}
+#mem{background:var(--side);overflow-y:auto;padding:12px 8px}
+#pick{position:fixed;display:none;gap:2px;background:var(--side);border:1px solid var(--line);border-radius:10px;padding:4px;z-index:20;box-shadow:0 8px 24px #0004}
+#pick button{width:40px;height:40px;border-radius:8px;font-size:20px}#pick button:hover{background:var(--hov)}
+.ov{position:fixed;inset:0;background:#000a;display:none;place-items:center;z-index:30;padding:16px}
+.card{background:var(--bg);border-radius:14px;padding:28px;width:min(420px,100%)}
+.card h2{margin:0 0 4px;font-size:26px;line-height:1.1}.card p{margin:0 0 18px;color:var(--mute)}
+.card label{display:block;font-size:12px;font-weight:700;color:var(--mute);margin:14px 0 6px}
+.card input[type=text]{width:100%;height:44px;border-radius:8px;border:1px solid var(--line);background:var(--in);padding:0 12px;font-size:16px}
+.sw{display:flex;flex-wrap:wrap;gap:8px}.sw button{width:36px;height:36px;border-radius:18px}.sw button.on{outline:3px solid var(--ink);outline-offset:2px}
+.avrow{display:flex;align-items:center;gap:12px}
+.btn{height:44px;padding:0 18px;border-radius:8px;background:var(--acc);color:#fff;font-weight:700}
+.btn2{height:44px;padding:0 14px;border-radius:8px;background:var(--in)}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:22px}
+#zoom img{max-width:100%;max-height:90vh;border-radius:8px}
+@media(max-width:1100px){#app{grid-template-columns:72px 240px minmax(0,1fr)}#mem{display:none}}
+@media(max-width:760px){#app{grid-template-columns:minmax(0,1fr)}
+ #rail,#side{position:fixed;top:0;bottom:0;z-index:10;transform:translateX(-120%);transition:transform .2s}
+ #rail{left:0;width:72px}#side{left:72px;width:min(280px,calc(100vw - 72px))}
+ body.nav #rail,body.nav #side{transform:none}#menu{display:block}
+ .acts{display:flex;position:static;grid-column:2;width:max-content;margin-top:4px;background:none;border:0}
+ .m .gut{display:none}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="rail" aria-label="Servers">
+    <button class="ri" id="homeBtn" title="Direct messages" aria-label="Direct messages">DM</button>
+    <div class="sep"></div>
+    <button class="ri on" id="srvBtn" title="Harbor HQ" aria-label="Harbor HQ">HQ</button>
+  </nav>
+  <aside id="side">
+    <div class="shead" id="sideTitle">Harbor HQ</div>
+    <div id="list"></div>
+    <div id="mepanel"><span id="meAv"></span><span class="nm" id="meName">Connecting...</span><button class="sm" id="editMe">Edit</button></div>
+  </aside>
+  <main id="main">
+    <div class="chead"><button id="menu" aria-label="Open channels">&#9776;</button><span class="t" id="chTitle"># general</span></div>
+    <div id="note"></div>
+    <div id="msgs" aria-live="polite"><div class="empty"><h2>Loading chat</h2>Connecting to the server.</div></div>
+    <div id="comp">
+      <div id="prev"><img alt="Image to send"><button id="unpic" aria-label="Remove image">&times;</button></div>
+      <div class="box">
+        <button id="att" title="Attach image" aria-label="Attach image">+</button>
+        <textarea id="txt" rows="1" maxlength="2000" placeholder="Message #general" disabled></textarea>
+        <button id="send" title="Send" aria-label="Send">&#10148;</button>
+      </div>
+      <input type="file" id="file" accept="image/*" hidden>
+      <input type="file" id="avfile" accept="image/*" hidden>
+    </div>
+  </main>
+  <aside id="mem" aria-label="Members"></aside>
+</div>
+<div id="pick"></div>
+<div class="ov" id="setup"><div class="card">
+  <h2>Pick your look</h2><p>This is how others see you in chat.</p>
+  <label for="nmIn">Display name</label><input type="text" id="nmIn" maxlength="24" placeholder="Your name">
+  <label>Color</label><div class="sw" id="sw"></div>
+  <label>Avatar (optional)</label>
+  <div class="avrow"><span id="avPrev"></span><button class="btn2" id="avBtn">Upload picture</button><button class="btn2" id="avClear">Remove</button></div>
+  <div class="row"><button class="btn2" id="setCancel">Cancel</button><button class="btn" id="setSave">Save</button></div>
+</div></div>
+<div class="ov" id="zoom"><img alt="Full size image"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script>
+{
+const $=s=>document.querySelector(s);
+const SB_URL='https://ewfiupvsjxmwafpllmju.supabase.co',SB_KEY='sb_publishable_RFSBXanaI72rg2BH0AEbZw_uCi5sK4T';
+const sb=window.supabase?window.supabase.createClient(SB_URL,SB_KEY):null;
+const CH=[{id:'general',d:'Talk about anything'},{id:'games',d:'What are you playing?'},{id:'builds',d:'Show your projects'},{id:'memes',d:'Funny stuff'},{id:'help',d:'Ask questions'}];
+const COLORS=['#ff6b4a','#f2a33a','#3fb37f','#2f9bd6','#6c63ff','#d04fa8','#7a8494','#c2453a'];
+const EMO=['\u{1F44D}','❤️','\u{1F602}','\u{1F62E}','\u{1F622}','\u{1F525}','\u{1F389}','\u{1F440}'];
+const S={uid:null,profiles:{},profLoaded:false,mode:'srv',view:{type:'ch',id:'general'},path:'',msgs:[],unsub:null,canWrite:true,room:'',img:null,draftAv:null,draftColor:COLORS[0],editing:null,pickFor:null,timer:0};
+
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const md=s=>esc(s).replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>').replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<i>$2</i>').replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
+const seg=s=>String(s).replace(/[^A-Za-z0-9_\-.~:@+]/g,'_');
+const pair=(a,b)=>[seg(a),seg(b)].sort().join('+');
+const P=id=>S.profiles[id]||{};
+const nameOf=id=>P(id).name||'Someone';
+const av=(id,sz,src)=>{const p=P(id),a=src!==undefined?src:p.avatar;return a?`<img class="av" src="${esc(a)}" width="${sz}" height="${sz}" alt="">`:`<span class="av" style="width:${sz}px;height:${sz}px;font-size:${sz*.42}px;background:${esc(p.color||'#7a8494')}">${esc((p.name||'?')[0].toUpperCase())}</span>`};
+const tm=t=>{const d=new Date(t),n=new Date(),h=d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});return d.toDateString()===n.toDateString()?'Today at '+h:d.toLocaleDateString()+' '+h};
+const note=t=>{const n=$('#note');n.textContent=t||'';n.style.display=t?'block':'none'};
+
+async function shrink(file,max,limit){
+  const img=await createImageBitmap(file);const k=Math.min(1,max/Math.max(img.width,img.height));
+  const c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+  let q=.82,u;do{u=c.toDataURL('image/jpeg',q);q-=.12}while(u.length>limit&&q>.2);
+  if(u.length>limit)throw new Error('too big');return u;
+}
+
+function renderSide(){
+  $('#homeBtn').classList.toggle('on',S.mode==='dm');$('#srvBtn').classList.toggle('on',S.mode==='srv');
+  let h='';
+  if(S.mode==='srv'){
+    $('#sideTitle').textContent='Harbor HQ';
+    h='<div class="lab">Text channels</div>'+CH.map(c=>`<button class="it ${S.view.type==='ch'&&S.view.id===c.id?'on':''}" data-ch="${c.id}"><span class="hash">#</span>${c.id}</button>`).join('');
+  }else{
+    $('#sideTitle').textContent='Direct messages';
+    const ids=Object.keys(S.profiles).filter(i=>i!==S.uid).sort((a,b)=>nameOf(a).localeCompare(nameOf(b)));
+    h='<div class="lab">People</div>'+(ids.length?ids.map(i=>`<button class="it ${S.view.type==='dm'&&S.view.id===i?'on':''}" data-dm="${esc(i)}">${av(i,32)}<span>${esc(nameOf(i))}</span></button>`).join(''):'<div class="lab" style="font-weight:400">Nobody else has joined yet. Share the page with a friend.</div>');
+  }
+  $('#list').innerHTML=h;
+  $('#meAv').innerHTML=S.uid?av(S.uid,32):'';
+  $('#meName').textContent=S.uid?(P(S.uid).name||'Set your name'):'Not signed in';
+}
+function renderMembers(){
+  const ids=Object.keys(S.profiles).sort((a,b)=>nameOf(a).localeCompare(nameOf(b)));
+  $('#mem').innerHTML=`<div class="lab">Members, ${ids.length}</div>`+ids.map(i=>`<button class="it" data-dm="${esc(i)}">${av(i,32)}<span style="color:${esc(P(i).color||'inherit')}">${esc(nameOf(i))}${i===S.uid?' (you)':''}</span></button>`).join('');
+}
+function renderHead(){
+  const v=S.view,t=v.type==='ch'?'# '+v.id:'@ '+nameOf(v.id);
+  $('#chTitle').textContent=t;
+  $('#txt').placeholder='Message '+(v.type==='ch'?'#'+v.id:'@'+nameOf(v.id));
+}
+function renderMsgs(){
+  const box=$('#msgs'),atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<120;
+  const v=S.view;
+  if(!S.msgs.length){
+    const c=CH.find(c=>c.id===v.id);
+    box.innerHTML=v.type==='ch'?`<div class="empty"><h2>Welcome to #${esc(v.id)}</h2>${esc(c?c.d:'')}. Be the first to say something.</div>`:`<div class="empty"><h2>${esc(nameOf(v.id))}</h2>This is the start of your direct messages with ${esc(nameOf(v.id))}.</div>`;
+    return;
+  }
+  let prev=null;
+  box.innerHTML=S.msgs.map(m=>{
+    const first=!prev||prev.uid!==m.uid||m.ts-prev.ts>300000;prev=m;
+    const mine=m.uid===S.uid;
+    const rx=Object.entries(m.reacts||{}).map(([e,o])=>{const us=Object.keys(o||{}).filter(k=>o[k]);return us.length?`<button class="rx ${o[S.uid]?'mine':''}" data-rx="${esc(e)}" data-id="${m.id}" title="${esc(us.map(nameOf).join(', '))}">${esc(e)} ${us.length}</button>`:''}).join('');
+    const body=S.editing===m.id?`<textarea class="txt" id="editBox" style="width:100%;background:var(--in);border:0;border-radius:8px;padding:8px;font-size:16px" rows="2">${esc(m.text)}</textarea><div class="ed">Enter to save, Esc to cancel</div>`
+      :`${m.text?`<div class="txt">${md(m.text)}${m.edited?' <span class="ed">(edited)</span>':''}</div>`:''}${m.img?`<img class="pic" src="${esc(m.img)}" alt="Shared image" data-zoom>`:''}`;
+    return `<div class="m ${first?'first':''}" data-mid="${m.id}">
+      ${first?av(m.uid,40):`<span class="gut">${new Date(m.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>`}
+      <div>${first?`<div><span class="who" style="color:${esc(P(m.uid).color||'inherit')}">${esc(nameOf(m.uid))}</span><span class="when">${tm(m.ts)}</span></div>`:''}${body}${rx?`<div class="rxs">${rx}</div>`:''}</div>
+      ${S.canWrite?`<div class="acts"><button data-react="${m.id}" aria-label="Add reaction">React</button>${mine?`<button data-edit="${m.id}">Edit</button><button class="del" data-del="${m.id}">Delete</button>`:''}</div>`:''}
+    </div>`;
+  }).join('');
+  if(atBottom||S.justOpened){box.scrollTop=box.scrollHeight;S.justOpened=false}
+  const eb=$('#editBox');if(eb){eb.focus();eb.setSelectionRange(eb.value.length,eb.value.length)}
+}
+
+const room=v=>v.type==='ch'?'ch:'+v.id:'dm:'+[S.uid,v.id].sort().join('+');
+let loadT=0;const schedule=()=>{clearTimeout(loadT);loadT=setTimeout(loadRoom,120)};
+async function loadProfiles(){
+  const {data,error}=await sb.from('harbor_profiles').select('id,name,color,avatar');
+  if(error){note('Could not load members.');return}
+  S.profiles={};data.forEach(p=>S.profiles[p.id]=p);
+  renderSide();renderMembers();renderHead();renderMsgs();
+}
+async function loadRoom(){
+  const r=S.room;
+  const {data,error}=await sb.from('harbor_messages').select('id,uid,text,img,edited,created_at').eq('room',r).order('created_at',{ascending:false}).limit(100);
+  if(r!==S.room)return;
+  if(error){note('Could not load messages.');return}
+  const msgs=data.reverse().map(m=>({...m,ts:Date.parse(m.created_at),reacts:{}}));
+  if(msgs.length){
+    const {data:rx}=await sb.from('harbor_reactions').select('message_id,uid,emoji').in('message_id',msgs.map(m=>m.id));
+    if(r!==S.room)return;
+    (rx||[]).forEach(x=>{const m=msgs.find(m=>m.id===x.message_id);if(m)(m.reacts[x.emoji]??={})[x.uid]=true});
+  }
+  S.msgs=msgs;note('');renderMsgs();
+}
+function openView(v){
+  S.view=v;S.editing=null;S.msgs=[];S.justOpened=true;
+  renderSide();renderHead();document.body.classList.remove('nav');
+  if(!S.uid)return;
+  S.room=room(v);
+  $('#msgs').innerHTML='<div class="empty"><h2>Loading</h2>Fetching messages.</div>';
+  loadRoom();
+  if(window.innerWidth>760)$('#txt').focus();
+}
+async function send(){
+  const t=$('#txt'),text=t.value.trim();
+  if(!S.uid||(!text&&!S.img))return;
+  const row={room:S.room,text};if(S.img)row.img=S.img;
+  t.value='';autosize();setImg(null);
+  const {error}=await sb.from('harbor_messages').insert(row);
+  if(error){t.value=text;note('Message failed to send. Try again.');return}
+  schedule();
+}
+async function toggleReact(id,e){
+  const m=S.msgs.find(x=>x.id===id);if(!m)return;
+  const mine=m.reacts[e]&&m.reacts[e][S.uid];
+  const q=mine?sb.from('harbor_reactions').delete().match({message_id:id,uid:S.uid,emoji:e}):sb.from('harbor_reactions').insert({message_id:id,emoji:e});
+  const {error}=await q;if(error)note('Reaction failed.');schedule();
+}
+async function saveEdit(id,text){
+  S.editing=null;const m=S.msgs.find(x=>x.id===id);
+  if(!m||text.trim()===m.text||(!text.trim()&&!m.img)){renderMsgs();return}
+  const {error}=await sb.from('harbor_messages').update({text:text.trim(),edited:true}).eq('id',id);
+  if(error)note('Edit failed.');schedule();
+}
+async function delMsg(id){const {error}=await sb.from('harbor_messages').delete().eq('id',id);if(error)note('Delete failed.');schedule()}
+
+function setImg(u){S.img=u;const p=$('#prev');p.style.display=u?'block':'none';if(u)p.querySelector('img').src=u}
+async function takeFile(f){
+  if(!f||!f.type.startsWith('image/'))return;
+  try{setImg(await shrink(f,1000,190000))}catch(_){note('That image could not be loaded or is too big.')}
+}
+function autosize(){const t=$('#txt');t.style.height='auto';t.style.height=Math.min(t.scrollHeight,200)+'px'}
+
+function openSetup(){
+  const p=P(S.uid);$('#nmIn').value=p.name||'';S.draftColor=p.color||COLORS[Math.floor(Math.random()*COLORS.length)];S.draftAv=p.avatar||null;
+  drawSetup();$('#setup').style.display='grid';$('#setCancel').style.display=p.name?'':'none';setTimeout(()=>$('#nmIn').focus(),50);
+}
+function drawSetup(){
+  $('#sw').innerHTML=COLORS.map(c=>`<button style="background:${c}" class="${c===S.draftColor?'on':''}" data-c="${c}" aria-label="Color ${c}"></button>`).join('');
+  const n=$('#nmIn').value.trim()||'?';
+  $('#avPrev').innerHTML=S.draftAv?`<img class="av" src="${esc(S.draftAv)}" width="56" height="56" alt="">`:`<span class="av" style="width:56px;height:56px;font-size:24px;background:${S.draftColor}">${esc(n[0].toUpperCase())}</span>`;
+}
+async function saveSetup(){
+  const name=$('#nmIn').value.trim().slice(0,24);if(!name){$('#nmIn').focus();return}
+  const b=$('#setSave');b.disabled=true;b.textContent='Saving...';
+  const {error}=await sb.from('harbor_profiles').upsert({id:S.uid,name,color:S.draftColor,avatar:S.draftAv,updated_at:new Date().toISOString()});
+  b.disabled=false;b.textContent='Save';
+  if(error){note('Could not save your profile.');return}
+  $('#setup').style.display='none';loadProfiles();
+}
+function showPick(id,btn){
+  const p=$('#pick');S.pickFor=id;p.innerHTML=EMO.map(e=>`<button data-e="${e}" aria-label="React ${e}">${e}</button>`).join('');
+  p.style.display='flex';const r=btn.getBoundingClientRect(),w=p.offsetWidth;
+  p.style.left=Math.max(8,Math.min(window.innerWidth-w-8,r.right-w))+'px';p.style.top=Math.max(8,r.top-52)+'px';
+}
+const hidePick=()=>{$('#pick').style.display='none';S.pickFor=null};
+
+$('#list').addEventListener('click',e=>{const c=e.target.closest('[data-ch]'),d=e.target.closest('[data-dm]');if(c)openView({type:'ch',id:c.dataset.ch});if(d)openView({type:'dm',id:d.dataset.dm})});
+$('#mem').addEventListener('click',e=>{const d=e.target.closest('[data-dm]');if(d&&d.dataset.dm!==S.uid){S.mode='dm';openView({type:'dm',id:d.dataset.dm})}});
+$('#homeBtn').onclick=()=>{S.mode='dm';renderSide()};
+$('#srvBtn').onclick=()=>{S.mode='srv';if(S.view.type!=='ch')openView({type:'ch',id:'general'});else renderSide()};
+$('#menu').onclick=()=>document.body.classList.toggle('nav');
+$('#main').addEventListener('click',e=>{if(e.target.id!=='menu')document.body.classList.remove('nav')});
+$('#txt').addEventListener('input',autosize);
+$('#txt').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+$('#txt').addEventListener('paste',e=>{const f=[...(e.clipboardData?.files||[])][0];if(f){e.preventDefault();takeFile(f)}});
+$('#main').addEventListener('dragover',e=>e.preventDefault());
+$('#main').addEventListener('drop',e=>{e.preventDefault();if(S.canWrite)takeFile(e.dataTransfer.files[0])});
+$('#send').onclick=send;$('#att').onclick=()=>S.canWrite&&$('#file').click();
+$('#file').onchange=e=>{takeFile(e.target.files[0]);e.target.value=''};
+$('#unpic').onclick=()=>setImg(null);
+$('#msgs').addEventListener('click',e=>{
+  const t=e.target;
+  if(t.closest('[data-zoom]')){$('#zoom img').src=t.src;$('#zoom').style.display='grid';return}
+  const rx=t.closest('[data-rx]');if(rx&&S.canWrite){toggleReact(rx.dataset.id,rx.dataset.rx);return}
+  const re=t.closest('[data-react]');if(re){showPick(re.dataset.react,re);e.stopPropagation();return}
+  const ed=t.closest('[data-edit]');if(ed){S.editing=ed.dataset.edit;renderMsgs();return}
+  const dl=t.closest('[data-del]');
+  if(dl){if(dl.classList.contains('arm')){delMsg(dl.dataset.del)}
+    else{dl.classList.add('arm');dl.textContent='Sure?';setTimeout(()=>{dl.classList.remove('arm');dl.textContent='Delete'},3000)}}
+});
+$('#msgs').addEventListener('keydown',e=>{
+  if(e.target.id!=='editBox')return;
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();saveEdit(S.editing,e.target.value)}
+  if(e.key==='Escape'){S.editing=null;renderMsgs()}
+});
+$('#pick').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(b&&S.pickFor)toggleReact(S.pickFor,b.dataset.e);hidePick()});
+document.addEventListener('click',e=>{if(!e.target.closest('#pick'))hidePick()});
+$('#zoom').onclick=()=>$('#zoom').style.display='none';
+$('#editMe').onclick=()=>S.uid&&openSetup();
+$('#sw').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(b){S.draftColor=b.dataset.c;drawSetup()}});
+$('#nmIn').addEventListener('input',drawSetup);
+$('#nmIn').addEventListener('keydown',e=>{if(e.key==='Enter')saveSetup()});
+$('#avBtn').onclick=()=>$('#avfile').click();
+$('#avfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{S.draftAv=await shrink(f,128,40000);drawSetup()}catch(_){note('That picture could not be used.')}};
+$('#avClear').onclick=()=>{S.draftAv=null;drawSetup()};
+$('#setCancel').onclick=()=>$('#setup').style.display='none';
+$('#setSave').onclick=saveSetup;
+
+renderSide();renderHead();
+(async()=>{
+  const off=t=>{$('#msgs').innerHTML='<div class="empty"><h2>Chat is offline</h2>'+t+'</div>';$('#meName').textContent='Offline'};
+  if(!window.supabase){off('The chat library did not load. Check your internet and reload.');return}
+  let {data:{session}}=await sb.auth.getSession();
+  if(!session){const r=await sb.auth.signInAnonymously();if(r.error){off('Could not join: '+esc(r.error.message));return}session=r.data.session}
+  S.uid=session.user.id;$('#txt').disabled=false;
+  await loadProfiles();
+  if(!S.profiles[S.uid])openSetup();
+  sb.channel('harbor')
+    .on('postgres_changes',{event:'*',schema:'public',table:'harbor_messages'},p=>{
+      if(p.eventType==='DELETE'?S.msgs.some(m=>m.id===p.old.id):p.new.room===S.room)schedule()})
+    .on('postgres_changes',{event:'*',schema:'public',table:'harbor_reactions'},p=>{
+      const mid=(p.new&&p.new.message_id)||(p.old&&p.old.message_id);if(S.msgs.some(m=>m.id===mid))schedule()})
+    .on('postgres_changes',{event:'*',schema:'public',table:'harbor_profiles'},()=>loadProfiles())
+    .subscribe(st=>{if(st==='CHANNEL_ERROR'||st==='TIMED_OUT')note('Live updates paused. New messages show when you send or switch channel.');if(st==='SUBSCRIBED')note('')});
+  openView(S.view);
+})();
+}
+</script>
+</body>
+</html>
